@@ -1,0 +1,107 @@
+name: "Hello World Evaluation"
+description: "Simple evaluation to test the ANODE-EVAL framework with a hello world function"
+
+prompts:
+  - id: "hello-world"
+    prompt: |
+      Implement the following two functions in src/lib.rs:
+
+      1. hello_world() -> String
+         Should return exactly "Hello, World!"
+
+      2. hello_name(name: &str) -> String
+         Should return "Hello, {name}!" where {name} is the input parameter.
+
+      The tests are already written. Run `cargo test` to verify your implementation.
+      Do not modify the test functions.
+    eval_path: "/Users/cpaika/projects/anode-eval/examples/hello_world"
+    test_harness: !cargo
+      features: []
+      release: false
+    setup_commands:
+      # Create a basic Rust project with tests for the agent to implement
+      - |
+        cat > Cargo.toml << 'CARGO_EOF'
+        [package]
+        name = "hello_world"
+        version = "0.1.0"
+        edition = "2021"
+        CARGO_EOF
+      - mkdir -p src
+      - |
+        cat > src/lib.rs << 'LIB_EOF'
+        /// Returns a greeting to the world
+        pub fn hello_world() -> String {
+            // TODO: Implement this function
+            String::new()
+        }
+
+        /// Returns a personalized greeting
+        pub fn hello_name(name: &str) -> String {
+            // TODO: Implement this function
+            String::new()
+        }
+
+        #[cfg(test)]
+        mod tests {
+            use super::*;
+
+            #[test]
+            fn test_hello_world() {
+                assert_eq!(hello_world(), "Hello, World!");
+            }
+
+            #[test]
+            fn test_hello_world_not_empty() {
+                assert!(!hello_world().is_empty());
+            }
+
+            #[test]
+            fn test_hello_world_contains_hello() {
+                assert!(hello_world().contains("Hello"));
+            }
+
+            #[test]
+            fn test_hello_world_contains_world() {
+                assert!(hello_world().contains("World"));
+            }
+
+            #[test]
+            fn test_hello_name_alice() {
+                assert_eq!(hello_name("Alice"), "Hello, Alice!");
+            }
+
+            #[test]
+            fn test_hello_name_bob() {
+                assert_eq!(hello_name("Bob"), "Hello, Bob!");
+            }
+
+            #[test]
+            fn test_hello_name_empty() {
+                assert_eq!(hello_name(""), "Hello, !");
+            }
+
+            #[test]
+            fn test_hello_name_with_spaces() {
+                assert_eq!(hello_name("John Doe"), "Hello, John Doe!");
+            }
+        }
+        LIB_EOF
+
+agents:
+  - tool: claude_code
+    model: claude_opus_4_5
+    iterations: 10
+  - tool: codex
+    model: gpt_5_2_xhigh
+    iterations: 10
+
+settings:
+  default_timeout_hours: 1
+  output_dir: "./eval-results"
+  default_iterations: 10
+  cleanup_on_complete: true
+  api_keys:
+    env_vars:
+      - ANTHROPIC_API_KEY
+      - OPENAI_API_KEY

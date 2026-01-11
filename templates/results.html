@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Results Dashboard - ANODE-EVAL</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <!-- Navigation -->
+    <nav class="gradient-bg text-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <a href="/" class="text-2xl font-bold hover:text-gray-200">ANODE-EVAL</a>
+                    <span class="text-sm opacity-75">Results Dashboard</span>
+                </div>
+                <div class="flex space-x-6">
+                    <a href="/live" class="hover:text-gray-200 font-medium">Live Sessions</a>
+                    <a href="/results" class="text-white font-medium border-b-2 border-white pb-1">Results</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 py-8">
+        <!-- Header -->
+        <div class="flex items-center justify-between mb-8">
+            <div>
+                <h1 class="text-2xl font-bold text-gray-800">Evaluation Results</h1>
+                <p class="text-gray-500">View and compare agent performance across evaluations</p>
+            </div>
+            <button onclick="refreshResults()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 flex items-center space-x-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                </svg>
+                <span>Refresh</span>
+            </button>
+        </div>
+
+        <!-- Stats Overview -->
+        <div class="grid md:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <p class="text-gray-500 text-sm">Total Evaluations</p>
+                <p class="text-3xl font-bold text-gray-800" id="stat-evals">0</p>
+            </div>
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <p class="text-gray-500 text-sm">Total Runs</p>
+                <p class="text-3xl font-bold text-gray-800" id="stat-runs">0</p>
+            </div>
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <p class="text-gray-500 text-sm">Avg Pass Rate</p>
+                <p class="text-3xl font-bold text-green-600" id="stat-pass-rate">0%</p>
+            </div>
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <p class="text-gray-500 text-sm">Top Agent</p>
+                <p class="text-xl font-bold text-indigo-600 truncate" id="stat-top-agent">-</p>
+            </div>
+        </div>
+
+        <!-- Results List -->
+        <div id="results-container" class="space-y-6">
+            <div class="text-center text-gray-500 py-12">
+                <svg class="w-12 h-12 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                </svg>
+                <p>Loading results...</p>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        function formatDate(dateStr) {
+            const date = new Date(dateStr);
+            return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+        }
+
+        function getScoreColor(score) {
+            if (score >= 90) return 'text-green-600';
+            if (score >= 70) return 'text-blue-600';
+            if (score >= 50) return 'text-yellow-600';
+            return 'text-red-600';
+        }
+
+        function getScoreBg(score) {
+            if (score >= 90) return 'bg-green-100';
+            if (score >= 70) return 'bg-blue-100';
+            if (score >= 50) return 'bg-yellow-100';
+            return 'bg-red-100';
+        }
+
+        function renderResult(result) {
+            return `
+                <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+                    <div class="p-6 border-b">
+                        <div class="flex items-start justify-between">
+                            <div>
+                                <h2 class="text-xl font-bold text-gray-800">${result.name}</h2>
+                                <p class="text-sm text-gray-500 mt-1">
+                                    <span class="font-mono">${result.eval_id}</span>
+                                </p>
+                                <p class="text-sm text-gray-400 mt-1">
+                                    ${formatDate(result.started_at)}
+                                    ${result.completed_at ? ' - ' + formatDate(result.completed_at) : ' (in progress)'}
+                                </p>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-3xl font-bold ${getScoreColor(result.overall_pass_rate)}">${result.overall_pass_rate.toFixed(1)}%</p>
+                                <p class="text-sm text-gray-500">pass rate</p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center space-x-6 mt-4 text-sm text-gray-600">
+                            <span>${result.total_runs} runs</span>
+                            <span class="text-green-600">${result.completed_runs} completed</span>
+                            ${result.failed_runs > 0 ? `<span class="text-red-600">${result.failed_runs} failed</span>` : ''}
+                            ${result.best_agent ? `<span class="text-indigo-600">Best: ${result.best_agent}</span>` : ''}
+                        </div>
+                    </div>
+
+                    ${result.agents.length > 0 ? `
+                    <div class="p-6">
+                        <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Agent Rankings</h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead>
+                                    <tr class="text-left text-xs text-gray-500 uppercase tracking-wider">
+                                        <th class="pb-3 pr-4">Rank</th>
+                                        <th class="pb-3 pr-4">Agent</th>
+                                        <th class="pb-3 pr-4">Model</th>
+                                        <th class="pb-3 pr-4 text-right">Score</th>
+                                        <th class="pb-3 pr-4 text-right">Tests Passed</th>
+                                        <th class="pb-3">Progress</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-100">
+                                    ${result.agents.map(agent => `
+                                        <tr class="hover:bg-gray-50">
+                                            <td class="py-3 pr-4">
+                                                <span class="inline-flex items-center justify-center w-8 h-8 rounded-full ${agent.rank === 1 ? 'bg-yellow-100 text-yellow-700' : agent.rank === 2 ? 'bg-gray-200 text-gray-700' : agent.rank === 3 ? 'bg-orange-100 text-orange-700' : 'bg-gray-100 text-gray-500'} font-bold text-sm">
+                                                    ${agent.rank}
+                                                </span>
+                                            </td>
+                                            <td class="py-3 pr-4 font-medium text-gray-800">${agent.agent_tool}</td>
+                                            <td class="py-3 pr-4 text-gray-600">${agent.model}</td>
+                                            <td class="py-3 pr-4 text-right">
+                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-sm font-medium ${getScoreBg(agent.average_score)} ${getScoreColor(agent.average_score)}">
+                                                    ${agent.average_score.toFixed(1)}%
+                                                </span>
+                                            </td>
+                                            <td class="py-3 pr-4 text-right text-gray-600">${agent.passed_tests}/${agent.total_tests}</td>
+                                            <td class="py-3 w-32">
+                                                <div class="w-full bg-gray-200 rounded-full h-2">
+                                                    <div class="bg-green-500 h-2 rounded-full" style="width: ${agent.average_score}%"></div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    ` : ''}
+
+                    <div class="px-6 pb-6">
+                        <a href="/eval/${result.eval_id}" class="text-indigo-600 hover:text-indigo-800 text-sm font-medium">
+                            View detailed results →
+                        </a>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function refreshResults() {
+            try {
+                const res = await fetch('/api/results');
+                const data = await res.json();
+
+                // Update stats
+                document.getElementById('stat-evals').textContent = data.total;
+
+                let totalRuns = 0;
+                let totalPassRate = 0;
+                let topAgent = null;
+                let topAgentScore = 0;
+
+                data.results.forEach(r => {
+                    totalRuns += r.total_runs;
+                    totalPassRate += r.overall_pass_rate;
+                    r.agents.forEach(a => {
+                        if (a.average_score > topAgentScore) {
+                            topAgentScore = a.average_score;
+                            topAgent = `${a.agent_tool} (${a.model})`;
+                        }
+                    });
+                });
+
+                document.getElementById('stat-runs').textContent = totalRuns;
+                document.getElementById('stat-pass-rate').textContent = data.total > 0
+                    ? (totalPassRate / data.total).toFixed(1) + '%'
+                    : '0%';
+                document.getElementById('stat-top-agent').textContent = topAgent || '-';
+
+                // Render results
+                const container = document.getElementById('results-container');
+                if (data.results.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-center text-gray-500 py-12 bg-white rounded-xl shadow-lg">
+                            <svg class="w-12 h-12 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                            </svg>
+                            <p class="text-lg font-medium">No results found</p>
+                            <p class="text-sm mt-2">Run an evaluation to see results here</p>
+                        </div>
+                    `;
+                } else {
+                    container.innerHTML = data.results.map(renderResult).join('');
+                }
+            } catch (e) {
+                console.error('Failed to load results:', e);
+                document.getElementById('results-container').innerHTML = `
+                    <div class="text-center text-red-500 py-12 bg-white rounded-xl shadow-lg">
+                        <p>Failed to load results</p>
+                        <p class="text-sm mt-2">${e.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Initial load and auto-refresh
+        refreshResults();
+        setInterval(refreshResults, 30000); // Refresh every 30 seconds
+    </script>
+</body>
+</html>

@@ -1,0 +1,72 @@
+# ANODE-EVAL Agent Container
+# This container is used to run AI coding agents (Claude Code, Codex, etc.)
+
+FROM ubuntu:22.04
+
+# Avoid prompts from apt
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install base dependencies
+RUN apt-get update && apt-get install -y \
+    curl \
+    wget \
+    git \
+    build-essential \
+    ca-certificates \
+    gnupg \
+    sudo \
+    vim \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Node.js (for agent CLIs)
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Rust (for cargo test)
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+# Install Python (for pytest)
+RUN apt-get update && apt-get install -y \
+    python3 \
+    python3-pip \
+    && rm -rf /var/lib/apt/lists/*
+RUN pip3 install pytest
+
+# Install Go - detect architecture
+RUN ARCH=$(dpkg --print-architecture) && \
+    if [ "$ARCH" = "arm64" ]; then \
+        wget https://go.dev/dl/go1.21.5.linux-arm64.tar.gz && \
+        tar -C /usr/local -xzf go1.21.5.linux-arm64.tar.gz && \
+        rm go1.21.5.linux-arm64.tar.gz; \
+    else \
+        wget https://go.dev/dl/go1.21.5.linux-amd64.tar.gz && \
+        tar -C /usr/local -xzf go1.21.5.linux-amd64.tar.gz && \
+        rm go1.21.5.linux-amd64.tar.gz; \
+    fi
+ENV PATH="/usr/local/go/bin:${PATH}"
+
+# Create non-root user for running agents
+RUN useradd -m -s /bin/bash -u 1000 agent \
+    && echo "agent ALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers
+
+# Create workspace and results directories
+RUN mkdir -p /workspace /results \
+    && chown -R agent:agent /workspace /results
+
+# Switch to non-root user
+USER agent
+WORKDIR /workspace
+
+# Install npm packages globally for agent user
+ENV NPM_CONFIG_PREFIX=/home/agent/.npm-global
+ENV PATH="/home/agent/.npm-global/bin:${PATH}"
+RUN mkdir -p /home/agent/.npm-global
+
+# Set up Rust for agent user
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+ENV PATH="/home/agent/.cargo/bin:${PATH}"
+
+# Default entrypoint - will be overridden by pod spec
+ENTRYPOINT ["/bin/bash"]

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ANODE-EVAL Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <!-- Navigation -->
+    <nav class="gradient-bg text-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <h1 class="text-2xl font-bold">ANODE-EVAL</h1>
+                    <span class="text-sm opacity-75">Agent Evaluation Framework</span>
+                </div>
+                <div class="flex space-x-6">
+                    <a href="/live" class="hover:text-gray-200 font-medium">Live Sessions</a>
+                    <a href="/results" class="hover:text-gray-200 font-medium">Results</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 py-8">
+        <div class="grid md:grid-cols-2 gap-8">
+            <!-- Live Sessions Card -->
+            <a href="/live" class="block">
+                <div class="bg-white rounded-xl shadow-lg p-8 hover:shadow-xl transition-shadow cursor-pointer">
+                    <div class="flex items-center space-x-4 mb-4">
+                        <div class="bg-green-100 p-3 rounded-lg">
+                            <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-bold text-gray-800">Live Sessions</h2>
+                            <p class="text-gray-500">Monitor running evaluations in real-time</p>
+                        </div>
+                    </div>
+                    <div id="live-stats" class="mt-4 text-sm text-gray-600">
+                        <span class="inline-flex items-center">
+                            <span class="w-2 h-2 bg-green-400 rounded-full mr-2 animate-pulse"></span>
+                            Loading...
+                        </span>
+                    </div>
+                </div>
+            </a>
+
+            <!-- Results Card -->
+            <a href="/results" class="block">
+                <div class="bg-white rounded-xl shadow-lg p-8 hover:shadow-xl transition-shadow cursor-pointer">
+                    <div class="flex items-center space-x-4 mb-4">
+                        <div class="bg-blue-100 p-3 rounded-lg">
+                            <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                            </svg>
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-bold text-gray-800">Results Dashboard</h2>
+                            <p class="text-gray-500">View and compare evaluation results</p>
+                        </div>
+                    </div>
+                    <div id="results-stats" class="mt-4 text-sm text-gray-600">
+                        Loading...
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- Quick Info -->
+        <div class="mt-12 bg-white rounded-xl shadow-lg p-8">
+            <h3 class="text-lg font-bold text-gray-800 mb-4">About ANODE-EVAL</h3>
+            <p class="text-gray-600 mb-4">
+                ANODE-EVAL is a framework for evaluating AI coding agents. It runs agents on programming tasks
+                and measures their performance using automated tests.
+            </p>
+            <div class="grid md:grid-cols-3 gap-4 mt-6">
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <h4 class="font-semibold text-gray-700">Supported Agents</h4>
+                    <ul class="text-sm text-gray-600 mt-2 space-y-1">
+                        <li>- Claude Code (Opus, Sonnet, Haiku)</li>
+                        <li>- Codex (GPT-5.2, O3)</li>
+                        <li>- OpenCode (Qwen Coder)</li>
+                    </ul>
+                </div>
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <h4 class="font-semibold text-gray-700">Test Harnesses</h4>
+                    <ul class="text-sm text-gray-600 mt-2 space-y-1">
+                        <li>- Cargo (Rust)</li>
+                        <li>- npm (JavaScript/TypeScript)</li>
+                        <li>- pytest (Python)</li>
+                        <li>- Go test</li>
+                    </ul>
+                </div>
+                <div class="bg-gray-50 rounded-lg p-4">
+                    <h4 class="font-semibold text-gray-700">Features</h4>
+                    <ul class="text-sm text-gray-600 mt-2 space-y-1">
+                        <li>- Kubernetes orchestration</li>
+                        <li>- Parallel execution</li>
+                        <li>- Automated scoring</li>
+                        <li>- Result comparison</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Fetch stats on page load
+        async function loadStats() {
+            try {
+                const sessionsRes = await fetch('/api/sessions');
+                const sessions = await sessionsRes.json();
+                document.getElementById('live-stats').innerHTML = `
+                    <span class="inline-flex items-center">
+                        <span class="w-2 h-2 bg-green-400 rounded-full mr-2 ${sessions.running > 0 ? 'animate-pulse' : ''}"></span>
+                        ${sessions.running} running, ${sessions.completed} completed
+                    </span>
+                `;
+            } catch (e) {
+                document.getElementById('live-stats').textContent = 'Unable to load stats';
+            }
+
+            try {
+                const resultsRes = await fetch('/api/results');
+                const results = await resultsRes.json();
+                document.getElementById('results-stats').textContent = `${results.total} evaluation${results.total !== 1 ? 's' : ''} stored`;
+            } catch (e) {
+                document.getElementById('results-stats').textContent = 'Unable to load stats';
+            }
+        }
+
+        loadStats();
+        // Refresh every 10 seconds
+        setInterval(loadStats, 10000);
+    </script>
+</body>
+</html>

@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Session Details - ANODE-EVAL</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .log-container { font-family: 'Monaco', 'Menlo', monospace; font-size: 12px; }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <!-- Navigation -->
+    <nav class="gradient-bg text-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <a href="/" class="text-2xl font-bold hover:text-gray-200">ANODE-EVAL</a>
+                    <span class="text-sm opacity-75">Session Details</span>
+                </div>
+                <div class="flex space-x-6">
+                    <a href="/live" class="hover:text-gray-200 font-medium">Live Sessions</a>
+                    <a href="/results" class="hover:text-gray-200 font-medium">Results</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 py-8">
+        <!-- Back link -->
+        <a href="/live" class="inline-flex items-center text-indigo-600 hover:text-indigo-800 mb-6">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+            </svg>
+            Back to Live Sessions
+        </a>
+
+        <!-- Loading state -->
+        <div id="loading" class="text-center py-12">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
+            <p class="mt-4 text-gray-500">Loading session details...</p>
+        </div>
+
+        <!-- Content (hidden until loaded) -->
+        <div id="content" class="hidden space-y-6">
+            <!-- Header -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <div class="flex items-start justify-between">
+                    <div>
+                        <div class="flex items-center space-x-3">
+                            <span id="status-badge" class="w-3 h-3 rounded-full"></span>
+                            <h1 class="text-2xl font-bold text-gray-800" id="session-title">-</h1>
+                        </div>
+                        <p class="text-sm text-gray-500 mt-1" id="session-prompt">-</p>
+                        <p class="text-xs text-gray-400 font-mono mt-2" id="session-id">-</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-3xl font-bold" id="pass-rate">-</p>
+                        <p class="text-sm text-gray-500">pass rate</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Grid -->
+            <div class="grid md:grid-cols-4 gap-4">
+                <div class="bg-white rounded-xl shadow-lg p-4">
+                    <p class="text-sm text-gray-500">Status</p>
+                    <p class="text-xl font-bold" id="stat-status">-</p>
+                </div>
+                <div class="bg-white rounded-xl shadow-lg p-4">
+                    <p class="text-sm text-gray-500">Duration</p>
+                    <p class="text-xl font-bold text-gray-800" id="stat-duration">-</p>
+                </div>
+                <div class="bg-white rounded-xl shadow-lg p-4">
+                    <p class="text-sm text-gray-500">Tests Passed</p>
+                    <p class="text-xl font-bold text-green-600" id="stat-tests">-</p>
+                </div>
+                <div class="bg-white rounded-xl shadow-lg p-4">
+                    <p class="text-sm text-gray-500">Evaluation</p>
+                    <p class="text-lg font-bold text-gray-800 truncate" id="stat-eval">-</p>
+                </div>
+            </div>
+
+            <!-- Progress Message -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h2 class="text-lg font-bold text-gray-800 mb-2">Progress</h2>
+                <p class="text-gray-600" id="progress-message">-</p>
+
+                <div id="progress-bar-container" class="mt-4 hidden">
+                    <div class="w-full bg-gray-200 rounded-full h-3">
+                        <div id="progress-bar" class="bg-green-500 h-3 rounded-full transition-all"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Error (if any) -->
+            <div id="error-container" class="hidden bg-red-50 border border-red-200 rounded-xl p-6">
+                <h2 class="text-lg font-bold text-red-800 mb-2">Error</h2>
+                <p class="text-red-600" id="error-message">-</p>
+            </div>
+
+            <!-- Logs -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-bold text-gray-800">Logs</h2>
+                    <div class="flex items-center space-x-2">
+                        <label class="flex items-center text-sm text-gray-600">
+                            <input type="checkbox" id="auto-scroll" checked class="mr-2">
+                            Auto-scroll
+                        </label>
+                        <button onclick="refreshLogs()" class="text-indigo-600 hover:text-indigo-800 text-sm">
+                            Refresh
+                        </button>
+                    </div>
+                </div>
+                <div id="logs-container" class="bg-gray-900 rounded-lg p-4 log-container text-gray-300 h-96 overflow-y-auto">
+                    <p class="text-gray-500">Loading logs...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Not found state -->
+        <div id="not-found" class="hidden bg-white rounded-xl shadow-lg p-12 text-center">
+            <svg class="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <p class="text-xl font-medium text-gray-800">Session not found</p>
+            <p class="text-gray-500 mt-2">The requested session could not be found or has expired.</p>
+            <a href="/live" class="inline-block mt-6 text-indigo-600 hover:text-indigo-800">← Back to live sessions</a>
+        </div>
+    </main>
+
+    <script>
+        const sessionId = window.location.pathname.split('/').pop();
+
+        function formatDuration(seconds) {
+            if (!seconds) return '-';
+            if (seconds < 60) return `${seconds}s`;
+            if (seconds < 3600) return `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
+            return `${Math.floor(seconds / 3600)}h ${Math.floor((seconds % 3600) / 60)}m`;
+        }
+
+        function getStatusColor(status) {
+            switch (status) {
+                case 'running': return 'bg-green-500';
+                case 'completed': return 'bg-blue-500';
+                case 'failed': return 'bg-red-500';
+                case 'queued': return 'bg-yellow-500';
+                default: return 'bg-gray-500';
+            }
+        }
+
+        function getScoreColor(score) {
+            if (score >= 90) return 'text-green-600';
+            if (score >= 70) return 'text-blue-600';
+            if (score >= 50) return 'text-yellow-600';
+            return 'text-red-600';
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        async function loadSession() {
+            try {
+                const res = await fetch(`/api/sessions/${sessionId}`);
+                if (!res.ok) throw new Error('Not found');
+
+                const data = await res.json();
+
+                // Hide loading, show content
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('content').classList.remove('hidden');
+
+                // Update header
+                document.getElementById('session-title').textContent = `${data.agent_tool} / ${data.model}`;
+                document.getElementById('session-prompt').textContent = data.prompt_id;
+                document.getElementById('session-id').textContent = data.session_id;
+
+                // Status badge
+                const statusBadge = document.getElementById('status-badge');
+                statusBadge.className = `w-3 h-3 rounded-full ${getStatusColor(data.status)}`;
+                if (data.status === 'running') {
+                    statusBadge.classList.add('animate-pulse');
+                }
+
+                // Pass rate
+                const passRate = data.tests_total > 0
+                    ? ((data.tests_passed / data.tests_total) * 100)
+                    : 0;
+                const passRateEl = document.getElementById('pass-rate');
+                passRateEl.textContent = passRate.toFixed(1) + '%';
+                passRateEl.className = `text-3xl font-bold ${getScoreColor(passRate)}`;
+
+                // Stats
+                document.getElementById('stat-status').textContent = data.status;
+                document.getElementById('stat-status').className = `text-xl font-bold ${getScoreColor(data.status === 'completed' ? 100 : data.status === 'failed' ? 0 : 50)}`;
+                document.getElementById('stat-duration').textContent = formatDuration(data.duration_seconds);
+                document.getElementById('stat-tests').textContent = `${data.tests_passed}/${data.tests_total}`;
+                document.getElementById('stat-eval').textContent = data.eval_name;
+
+                // Progress
+                document.getElementById('progress-message').textContent = data.progress_message;
+
+                if (data.tests_total > 0) {
+                    document.getElementById('progress-bar-container').classList.remove('hidden');
+                    document.getElementById('progress-bar').style.width = `${passRate}%`;
+                }
+
+                // Error
+                if (data.error) {
+                    document.getElementById('error-container').classList.remove('hidden');
+                    document.getElementById('error-message').textContent = data.error;
+                } else {
+                    document.getElementById('error-container').classList.add('hidden');
+                }
+
+                // Logs
+                const logsContainer = document.getElementById('logs-container');
+                if (data.recent_logs.length > 0) {
+                    logsContainer.innerHTML = data.recent_logs
+                        .map(log => `<div class="py-0.5">${escapeHtml(log)}</div>`)
+                        .join('');
+
+                    if (document.getElementById('auto-scroll').checked) {
+                        logsContainer.scrollTop = logsContainer.scrollHeight;
+                    }
+                } else {
+                    logsContainer.innerHTML = '<p class="text-gray-500">No logs available yet</p>';
+                }
+
+            } catch (e) {
+                console.error('Failed to load session:', e);
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('not-found').classList.remove('hidden');
+            }
+        }
+
+        async function refreshLogs() {
+            try {
+                const res = await fetch(`/api/sessions/${sessionId}/logs`);
+                if (!res.ok) return;
+
+                const logs = await res.json();
+                const logsContainer = document.getElementById('logs-container');
+
+                if (logs.length > 0) {
+                    logsContainer.innerHTML = logs
+                        .map(log => `<div class="py-0.5">${escapeHtml(log)}</div>`)
+                        .join('');
+
+                    if (document.getElementById('auto-scroll').checked) {
+                        logsContainer.scrollTop = logsContainer.scrollHeight;
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to refresh logs:', e);
+            }
+        }
+
+        // Initial load and auto-refresh
+        loadSession();
+        setInterval(loadSession, 2000); // Refresh every 2 seconds
+    </script>
+</body>
+</html>

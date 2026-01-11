@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Evaluation Details - ANODE-EVAL</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <!-- Navigation -->
+    <nav class="gradient-bg text-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <a href="/" class="text-2xl font-bold hover:text-gray-200">ANODE-EVAL</a>
+                    <span class="text-sm opacity-75">Evaluation Details</span>
+                </div>
+                <div class="flex space-x-6">
+                    <a href="/live" class="hover:text-gray-200 font-medium">Live Sessions</a>
+                    <a href="/results" class="hover:text-gray-200 font-medium">Results</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 py-8">
+        <!-- Back link -->
+        <a href="/results" class="inline-flex items-center text-indigo-600 hover:text-indigo-800 mb-6">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+            </svg>
+            Back to Results
+        </a>
+
+        <!-- Loading state -->
+        <div id="loading" class="text-center py-12">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
+            <p class="mt-4 text-gray-500">Loading evaluation details...</p>
+        </div>
+
+        <!-- Content (hidden until loaded) -->
+        <div id="content" class="hidden">
+            <!-- Header -->
+            <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
+                <div class="flex items-start justify-between">
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-800" id="eval-name">-</h1>
+                        <p class="text-sm text-gray-500 mt-1 font-mono" id="eval-id">-</p>
+                        <p class="text-sm text-gray-400 mt-2" id="eval-time">-</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-4xl font-bold" id="pass-rate">-</p>
+                        <p class="text-sm text-gray-500">overall pass rate</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-4 gap-4 mt-6">
+                    <div class="bg-gray-50 rounded-lg p-4 text-center">
+                        <p class="text-2xl font-bold text-gray-800" id="stat-runs">-</p>
+                        <p class="text-sm text-gray-500">Total Runs</p>
+                    </div>
+                    <div class="bg-gray-50 rounded-lg p-4 text-center">
+                        <p class="text-2xl font-bold text-green-600" id="stat-completed">-</p>
+                        <p class="text-sm text-gray-500">Completed</p>
+                    </div>
+                    <div class="bg-gray-50 rounded-lg p-4 text-center">
+                        <p class="text-2xl font-bold text-red-600" id="stat-failed">-</p>
+                        <p class="text-sm text-gray-500">Failed</p>
+                    </div>
+                    <div class="bg-gray-50 rounded-lg p-4 text-center">
+                        <p class="text-2xl font-bold text-gray-800" id="stat-tests">-</p>
+                        <p class="text-sm text-gray-500">Tests Run</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Agent Rankings -->
+            <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
+                <h2 class="text-lg font-bold text-gray-800 mb-4">Agent Rankings</h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full" id="rankings-table">
+                        <thead>
+                            <tr class="text-left text-xs text-gray-500 uppercase tracking-wider border-b">
+                                <th class="pb-3 pr-4">Rank</th>
+                                <th class="pb-3 pr-4">Agent</th>
+                                <th class="pb-3 pr-4">Model</th>
+                                <th class="pb-3 pr-4 text-right">Score</th>
+                                <th class="pb-3 pr-4 text-right">Tests</th>
+                                <th class="pb-3 pr-4 text-right">Runs</th>
+                                <th class="pb-3">Progress</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rankings-body" class="divide-y divide-gray-100">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Individual Runs -->
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h2 class="text-lg font-bold text-gray-800 mb-4">Individual Runs</h2>
+                <div id="runs-container" class="space-y-4">
+                </div>
+            </div>
+        </div>
+
+        <!-- Error state -->
+        <div id="error" class="hidden bg-white rounded-xl shadow-lg p-12 text-center">
+            <svg class="w-16 h-16 mx-auto text-red-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+            </svg>
+            <p class="text-xl font-medium text-gray-800">Evaluation not found</p>
+            <p class="text-gray-500 mt-2">The requested evaluation could not be loaded.</p>
+            <a href="/results" class="inline-block mt-6 text-indigo-600 hover:text-indigo-800">← Back to results</a>
+        </div>
+    </main>
+
+    <script>
+        const evalId = window.location.pathname.split('/').pop();
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '-';
+            const date = new Date(dateStr);
+            return date.toLocaleDateString() + ' ' + date.toLocaleTimeString();
+        }
+
+        function getScoreColor(score) {
+            if (score >= 90) return 'text-green-600';
+            if (score >= 70) return 'text-blue-600';
+            if (score >= 50) return 'text-yellow-600';
+            return 'text-red-600';
+        }
+
+        function getStatusBadge(status) {
+            const colors = {
+                completed: 'bg-green-100 text-green-800',
+                failed: 'bg-red-100 text-red-800',
+                timeout: 'bg-yellow-100 text-yellow-800',
+                running: 'bg-blue-100 text-blue-800',
+                pending: 'bg-gray-100 text-gray-800',
+            };
+            return `<span class="px-2 py-1 rounded-full text-xs font-medium ${colors[status] || colors.pending}">${status}</span>`;
+        }
+
+        function renderRankBadge(rank) {
+            const colors = {
+                1: 'bg-yellow-100 text-yellow-700',
+                2: 'bg-gray-200 text-gray-700',
+                3: 'bg-orange-100 text-orange-700',
+            };
+            return `<span class="inline-flex items-center justify-center w-8 h-8 rounded-full ${colors[rank] || 'bg-gray-100 text-gray-500'} font-bold text-sm">${rank}</span>`;
+        }
+
+        async function loadEvaluation() {
+            try {
+                const res = await fetch(`/api/results/${evalId}`);
+                if (!res.ok) throw new Error('Not found');
+
+                const data = await res.json();
+
+                // Hide loading, show content
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('content').classList.remove('hidden');
+
+                // Populate header
+                document.getElementById('eval-name').textContent = data.name;
+                document.getElementById('eval-id').textContent = data.eval_id;
+                document.getElementById('eval-time').textContent = `${formatDate(data.started_at)} - ${formatDate(data.completed_at)}`;
+
+                const passRate = data.summary.overall_pass_rate;
+                const passRateEl = document.getElementById('pass-rate');
+                passRateEl.textContent = passRate.toFixed(1) + '%';
+                passRateEl.className = `text-4xl font-bold ${getScoreColor(passRate)}`;
+
+                // Stats
+                document.getElementById('stat-runs').textContent = data.summary.total_combinations;
+                document.getElementById('stat-completed').textContent = data.summary.completed;
+                document.getElementById('stat-failed').textContent = data.summary.failed;
+                document.getElementById('stat-tests').textContent = `${data.summary.passed_tests}/${data.summary.total_tests}`;
+
+                // Rankings table
+                const rankingsBody = document.getElementById('rankings-body');
+                rankingsBody.innerHTML = data.agent_scores.map(agent => `
+                    <tr class="hover:bg-gray-50">
+                        <td class="py-3 pr-4">${renderRankBadge(agent.rank)}</td>
+                        <td class="py-3 pr-4 font-medium text-gray-800">${agent.agent_tool}</td>
+                        <td class="py-3 pr-4 text-gray-600">${agent.model}</td>
+                        <td class="py-3 pr-4 text-right">
+                            <span class="font-bold ${getScoreColor(agent.average_score)}">${agent.average_score.toFixed(1)}%</span>
+                        </td>
+                        <td class="py-3 pr-4 text-right text-gray-600">${agent.passed_tests}/${agent.total_tests}</td>
+                        <td class="py-3 pr-4 text-right text-gray-600">${agent.completed_runs}/${agent.total_runs}</td>
+                        <td class="py-3 w-32">
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-green-500 h-2 rounded-full" style="width: ${agent.average_score}%"></div>
+                            </div>
+                        </td>
+                    </tr>
+                `).join('');
+
+                // Individual runs
+                const runsContainer = document.getElementById('runs-container');
+                runsContainer.innerHTML = data.runs.map(run => `
+                    <div class="border rounded-lg p-4 hover:bg-gray-50">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <div class="flex items-center space-x-3">
+                                    ${getStatusBadge(run.status)}
+                                    <span class="font-medium text-gray-800">${run.agent_tool} / ${run.model}</span>
+                                </div>
+                                <p class="text-sm text-gray-500 mt-1">${run.prompt_id}</p>
+                                <p class="text-xs text-gray-400 font-mono mt-1">${run.run_id}</p>
+                            </div>
+                            <div class="text-right">
+                                ${run.score !== null ? `
+                                    <p class="text-xl font-bold ${getScoreColor(run.score)}">${run.score.toFixed(1)}%</p>
+                                    ${run.test_results ? `<p class="text-sm text-gray-500">${run.test_results.passed}/${run.test_results.total} tests</p>` : ''}
+                                ` : ''}
+                                ${run.duration_seconds ? `<p class="text-xs text-gray-400">${run.duration_seconds}s</p>` : ''}
+                            </div>
+                        </div>
+                        ${run.error ? `
+                            <div class="mt-3 bg-red-50 border border-red-200 rounded p-2">
+                                <p class="text-sm text-red-600">${run.error}</p>
+                            </div>
+                        ` : ''}
+                    </div>
+                `).join('');
+
+            } catch (e) {
+                console.error('Failed to load evaluation:', e);
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('error').classList.remove('hidden');
+            }
+        }
+
+        loadEvaluation();
+    </script>
+</body>
+</html>

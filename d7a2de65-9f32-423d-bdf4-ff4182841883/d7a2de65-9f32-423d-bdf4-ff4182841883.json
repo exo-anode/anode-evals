@@ -1,0 +1,81 @@
+{
+  "name": "Hello World Evaluation",
+  "eval_id": "d7a2de65-9f32-423d-bdf4-ff4182841883",
+  "started_at": "2026-01-11T18:43:39.030377Z",
+  "completed_at": "2026-01-11T18:44:39.183438Z",
+  "runs": [
+    {
+      "run_id": "86d1df9e-773a-4869-bf28-3134f69c7c07",
+      "prompt_id": "hello-world",
+      "agent_id": "claude-code-claude-opus-4-5-20251101",
+      "agent_tool": "claude-code",
+      "model": "claude-opus-4-5-20251101",
+      "started_at": "2026-01-11T18:43:39.030523Z",
+      "completed_at": "2026-01-11T18:44:09.119226Z",
+      "duration_seconds": 30,
+      "status": "failed",
+      "test_results": null,
+      "score": 0.0,
+      "agent_logs": "=== ANODE-EVAL Agent Runner ===\nRun ID: 86d1df9e-773a-4869-bf28-3134f69c7c07\nAgent: claude-code\nModel: claude-opus-4-5-20251101\nIterations: 10\nTimeout: 1 hours\n\n/bin/bash: line 13: echo: write error: No space left on device\n",
+      "error": "Container exited with code 1: Error"
+    },
+    {
+      "run_id": "83024997-c3a9-4612-baa1-56702a4cdbf9",
+      "prompt_id": "hello-world",
+      "agent_id": "codex-gpt-5.2-xhigh",
+      "agent_tool": "codex",
+      "model": "gpt-5.2-xhigh",
+      "started_at": "2026-01-11T18:44:09.134241Z",
+      "completed_at": "2026-01-11T18:44:39.167434Z",
+      "duration_seconds": 30,
+      "status": "failed",
+      "test_results": null,
+      "score": 0.0,
+      "agent_logs": "=== ANODE-EVAL Agent Runner ===\nRun ID: 83024997-c3a9-4612-baa1-56702a4cdbf9\nAgent: codex\nModel: gpt-5.2-xhigh\nIterations: 10\nTimeout: 1 hours\n\n/bin/bash: line 13: echo: write error: No space left on device\n",
+      "error": "Container exited with code 1: Error"
+    }
+  ],
+  "agent_scores": [
+    {
+      "agent_id": "claude-code-claude-opus-4-5-20251101",
+      "agent_tool": "claude-code",
+      "model": "claude-opus-4-5-20251101",
+      "total_runs": 1,
+      "completed_runs": 0,
+      "failed_runs": 1,
+      "total_tests": 0,
+      "passed_tests": 0,
+      "average_score": 0.0,
+      "rank": 1,
+      "runs": [
+        "86d1df9e-773a-4869-bf28-3134f69c7c07"
+      ]
+    },
+    {
+      "agent_id": "codex-gpt-5.2-xhigh",
+      "agent_tool": "codex",
+      "model": "gpt-5.2-xhigh",
+      "total_runs": 1,
+      "completed_runs": 0,
+      "failed_runs": 1,
+      "total_tests": 0,
+      "passed_tests": 0,
+      "average_score": 0.0,
+      "rank": 2,
+      "runs": [
+        "83024997-c3a9-4612-baa1-56702a4cdbf9"
+      ]
+    }
+  ],
+  "summary": {
+    "total_combinations": 2,
+    "completed": 0,
+    "failed": 2,
+    "timed_out": 0,
+    "total_tests": 0,
+    "passed_tests": 0,
+    "overall_pass_rate": 0.0,
+    "best_agent": "claude-code-claude-opus-4-5-20251101",
+    "worst_agent": "codex-gpt-5.2-xhigh"
+  }
+}
