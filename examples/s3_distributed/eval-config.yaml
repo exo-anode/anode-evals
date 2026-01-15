@@ -1,0 +1,212 @@
+name: distributed-s3-storage
+description: Build a distributed, fault-tolerant S3-compatible object storage cluster with consensus
+
+prompt: |
+  # Distributed S3-Compatible Object Storage Cluster
+
+  Build a **distributed, fault-tolerant S3-compatible object storage server** in Rust that runs as a 3-node cluster with consensus-based replication.
+
+  ## Architecture Overview
+
+  You are building a single binary that can be launched multiple times with different configurations to form a cluster. The cluster must:
+
+  1. **Run 3 nodes** that communicate over HTTP for replication
+  2. **Replicate all data** across nodes using quorum-based consensus
+  3. **Tolerate single node failures** - the cluster must continue operating when 1 node is down
+  4. **Maintain consistency** - reads after writes must see the written data (linearizable or sequential consistency)
+
+  ## Command Line Interface
+
+  The binary MUST accept these command-line arguments:
+
+  ```
+  s3_distributed --node-id <ID> --port <PORT> --peers <PEER_URLS>
+  ```
+
+  - `--node-id`: Unique identifier for this node (1, 2, or 3)
+  - `--port`: HTTP port for S3 API (e.g., 3001, 3002, 3003)
+  - `--peers`: Comma-separated list of peer node URLs (e.g., "http://localhost:3002,http://localhost:3003")
+
+  Example cluster startup:
+  ```bash
+  # Terminal 1
+  ./s3_distributed --node-id 1 --port 3001 --peers "http://localhost:3002,http://localhost:3003"
+
+  # Terminal 2
+  ./s3_distributed --node-id 2 --port 3002 --peers "http://localhost:3001,http://localhost:3003"
+
+  # Terminal 3
+  ./s3_distributed --node-id 3 --port 3003 --peers "http://localhost:3001,http://localhost:3002"
+  ```
+
+  ## Consensus Requirements
+
+  ### Write Path (PutObject, CreateBucket, DeleteObject, DeleteBucket)
+
+  For any write operation to succeed, you MUST:
+  1. Receive the write request on any node
+  2. Replicate the operation to peer nodes
+  3. Wait for acknowledgment from **at least 2 out of 3 nodes** (quorum) before responding success
+  4. If quorum cannot be reached (e.g., 2 nodes are down), return an error
+
+  ### Read Path (GetObject, HeadObject, ListObjects, ListBuckets, HeadBucket)
+
+  For reads, you have two options:
+  - **Option A (Simpler)**: Read from local storage - acceptable if writes are quorum-replicated
+  - **Option B (Stronger)**: Read from quorum for stronger consistency guarantees
+
+  ### Replication Protocol
+
+  Implement a simple replication protocol:
+
+  1. **Internal Replication Endpoints**: Each node exposes internal HTTP endpoints for replication:
+     - `POST /internal/replicate` - Receive replicated write operations
+     - `GET /internal/health` - Health check endpoint
+
+  2. **Replication Request Format**:
+     ```json
+     {
+       "operation": "put_object" | "delete_object" | "create_bucket" | "delete_bucket",
+       "bucket": "bucket-name",
+       "key": "object-key",        // for object operations
+       "data": "<base64-encoded>", // for put_object
+       "content_type": "text/plain",
+       "timestamp": 1234567890
+     }
+     ```
+
+  3. **Conflict Resolution**: Use Last-Writer-Wins based on timestamp. If timestamps are equal, higher node-id wins.
+
+  ## S3 API Requirements
+
+  Each node must expose these S3-compatible endpoints on its configured port:
+
+  ### Bucket Operations
+  - `PUT /{bucket}` - CreateBucket (return 200 on success, 409 if exists)
+  - `GET /` - ListBuckets (return XML list)
+  - `DELETE /{bucket}` - DeleteBucket (return 204 on success, 409 if not empty, 404 if missing)
+  - `HEAD /{bucket}` - HeadBucket (return 200 if exists, 404 if missing)
+
+  ### Object Operations
+  - `PUT /{bucket}/{key}` - PutObject (return 200 on success)
+  - `GET /{bucket}/{key}` - GetObject (return 200 + body, 404 if missing)
+  - `DELETE /{bucket}/{key}` - DeleteObject (return 204 on success)
+  - `HEAD /{bucket}/{key}` - HeadObject (return 200 if exists, 404 if missing)
+  - `GET /{bucket}?list-type=2` - ListObjectsV2 (return XML list)
+
+  ### Response Format
+
+  Use standard S3 XML response format. Example ListBuckets response:
+  ```xml
+  <?xml version="1.0" encoding="UTF-8"?>
+  <ListAllMyBucketsResult>
+    <Buckets>
+      <Bucket>
+        <Name>my-bucket</Name>
+        <CreationDate>2024-01-15T10:30:00Z</CreationDate>
+      </Bucket>
+    </Buckets>
+  </ListAllMyBucketsResult>
+  ```
+
+  ### Error Responses
+
+  Return proper S3 error XML:
+  ```xml
+  <?xml version="1.0" encoding="UTF-8"?>
+  <Error>
+    <Code>NoSuchBucket</Code>
+    <Message>The specified bucket does not exist</Message>
+    <RequestId>abc123</RequestId>
+  </Error>
+  ```
+
+  Error codes to implement:
+  - `NoSuchBucket` (404) - Bucket doesn't exist
+  - `NoSuchKey` (404) - Object doesn't exist
+  - `BucketAlreadyExists` (409) - Bucket already exists
+  - `BucketNotEmpty` (409) - Cannot delete non-empty bucket
+  - `InternalError` (500) - Replication/consensus failure
+  - `ServiceUnavailable` (503) - Cannot reach quorum
+
+  ## Fault Tolerance Requirements
+
+  Your implementation MUST handle these scenarios:
+
+  ### 1. Single Node Failure
+  - When 1 node is down, the remaining 2 nodes MUST continue to:
+    - Accept and process write operations (2/3 quorum still possible)
+    - Serve read operations
+    - Return success for all operations
+
+  ### 2. Node Recovery
+  - When a failed node comes back online, it should:
+    - Rejoin the cluster
+    - Sync any missed data from peers (can be lazy/background sync)
+    - Resume normal operation
+
+  ### 3. Network Partitions
+  - If a node cannot reach its peers during a write:
+    - Try to reach quorum with available nodes
+    - If quorum impossible, return 503 ServiceUnavailable
+
+  ### 4. Timeout Handling
+  - Replication requests to peers should timeout after 5 seconds
+  - Don't block indefinitely waiting for a dead node
+
+  ## Implementation Tips
+
+  ### Data Storage
+  - Use in-memory storage (HashMap) for simplicity
+  - Key structure: `buckets: HashMap<String, Bucket>` where Bucket contains `objects: HashMap<String, Object>`
+
+  ### Concurrency
+  - Use `Arc<RwLock<...>>` for thread-safe storage access
+  - Be careful about holding locks during network calls (can cause deadlocks)
+
+  ### Replication Flow
+  ```
+  Client Request → Node 1
+       ↓
+  Node 1 applies locally
+       ↓
+  Node 1 replicates to Node 2 (async) ──→ Node 2 applies & ACKs
+  Node 1 replicates to Node 3 (async) ──→ Node 3 applies & ACKs
+       ↓
+  Wait for 1 more ACK (need 2 total including self)
+       ↓
+  Return success to client
+  ```
+
+  ### Health Checking
+  - Implement `GET /internal/health` returning 200 OK
+  - Use this to check if peers are alive before attempting replication
+
+  ## Testing
+
+  The test suite will:
+  1. Start 3 nodes on ports 3001, 3002, 3003
+  2. Run S3 API conformance tests against any node
+  3. Kill one node and verify the cluster still works
+  4. Verify data written before the kill is still readable
+  5. Verify new writes succeed with 2 nodes
+  6. Restart the killed node and verify it syncs
+
+  Run tests with:
+  ```bash
+  cargo test --test distributed_conformance -- --test-threads=1
+  ```
+
+  ## Deliverables
+
+  1. Complete implementation in `src/main.rs`
+  2. The binary must compile with `cargo build --release`
+  3. The binary must accept the CLI arguments specified above
+  4. All S3 operations must work when 3 nodes are running
+  5. All S3 operations must work when only 2 nodes are running
+  6. Proper error handling when fewer than 2 nodes are available
+
+test_harness:
+  build_command: "cargo build --release"
+  test_command: "cargo test --test distributed_conformance -- --test-threads=1 --nocapture"
+  timeout_seconds: 600

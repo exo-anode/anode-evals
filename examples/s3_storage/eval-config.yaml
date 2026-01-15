@@ -1,0 +1,132 @@
+name: "S3-Compatible Object Storage Evaluation"
+description: "Build an S3-compatible object storage server from scratch"
+
+prompts:
+  - id: s3-storage
+    prompt: |
+      Build an S3-compatible object storage server in Rust that handles basic bucket and object operations.
+
+      ## Requirements
+
+      Create a server that:
+      - Listens on port 3000
+      - Stores data in memory (no persistence needed)
+      - Implements S3-compatible REST API using path-style URLs
+
+      ## API Operations to Implement
+
+      ### Bucket Operations
+
+      | Operation | Method | Path | Success | Error |
+      |-----------|--------|------|---------|-------|
+      | CreateBucket | PUT | /{bucket} | 200 | 409 BucketAlreadyExists |
+      | HeadBucket | HEAD | /{bucket} | 200 | 404 NoSuchBucket |
+      | DeleteBucket | DELETE | /{bucket} | 204 | 404 NoSuchBucket, 409 BucketNotEmpty |
+      | ListBuckets | GET | / | 200 + XML | - |
+
+      ### Object Operations
+
+      | Operation | Method | Path | Success | Error |
+      |-----------|--------|------|---------|-------|
+      | PutObject | PUT | /{bucket}/{key} | 200 | 404 NoSuchBucket |
+      | GetObject | GET | /{bucket}/{key} | 200 + body | 404 NoSuchKey |
+      | HeadObject | HEAD | /{bucket}/{key} | 200 | 404 NoSuchKey |
+      | DeleteObject | DELETE | /{bucket}/{key} | 204 | - |
+      | ListObjectsV2 | GET | /{bucket}?list-type=2 | 200 + XML | 404 NoSuchBucket |
+
+      ## XML Response Formats
+
+      ### ListBuckets Response
+      ```xml
+      <?xml version="1.0" encoding="UTF-8"?>
+      <ListAllMyBucketsResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+        <Owner>
+          <ID>owner-id</ID>
+          <DisplayName>owner</DisplayName>
+        </Owner>
+        <Buckets>
+          <Bucket>
+            <Name>bucket-name</Name>
+            <CreationDate>2024-01-01T00:00:00.000Z</CreationDate>
+          </Bucket>
+        </Buckets>
+      </ListAllMyBucketsResult>
+      ```
+
+      ### ListObjectsV2 Response
+      ```xml
+      <?xml version="1.0" encoding="UTF-8"?>
+      <ListBucketResult xmlns="http://s3.amazonaws.com/doc/2006-03-01/">
+        <Name>bucket-name</Name>
+        <Prefix></Prefix>
+        <MaxKeys>1000</MaxKeys>
+        <IsTruncated>false</IsTruncated>
+        <Contents>
+          <Key>object-key</Key>
+          <LastModified>2024-01-01T00:00:00.000Z</LastModified>
+          <ETag>"etag-value"</ETag>
+          <Size>1234</Size>
+          <StorageClass>STANDARD</StorageClass>
+        </Contents>
+      </ListBucketResult>
+      ```
+
+      ### Error Response
+      ```xml
+      <?xml version="1.0" encoding="UTF-8"?>
+      <Error>
+        <Code>NoSuchBucket</Code>
+        <Message>The specified bucket does not exist</Message>
+        <BucketName>bucket-name</BucketName>
+        <RequestId>request-id</RequestId>
+      </Error>
+      ```
+
+      ## Required Response Headers
+
+      All responses should include:
+      - `x-amz-request-id`: Unique request identifier
+
+      PutObject/GetObject/HeadObject should include:
+      - `ETag`: MD5 hash of content in quotes (e.g., "d41d8cd98f00b204e9800998ecf8427e")
+      - `Content-Length`: Size in bytes
+      - `Last-Modified`: RFC 2822 format timestamp
+
+      ## ListObjectsV2 Query Parameters
+
+      Support these query parameters:
+      - `list-type=2` (required to identify ListObjectsV2)
+      - `prefix`: Filter objects by key prefix
+      - `max-keys`: Maximum number of keys to return (default 1000)
+      - `continuation-token`: Token for pagination
+
+      ## Tech Stack
+
+      The Cargo.toml has these dependencies:
+      - axum (web framework)
+      - tokio (async runtime)
+      - serde + quick-xml (XML serialization)
+      - chrono (timestamps)
+      - md-5 + base64 (ETag generation)
+      - uuid (request IDs)
+
+      ## Instructions
+
+      1. Implement the server in src/main.rs
+      2. Run `cargo build` to check for compile errors
+      3. Run `cargo test --test s3_conformance -- --test-threads=1` to verify (20 tests must pass)
+
+    eval_path: ./
+    test_harness: !cargo
+      test_name: s3_conformance
+
+agents:
+  - tool: claude_code
+    model: claude_opus_4_5
+    iterations: 100
+  - tool: claude_code
+    model: claude_sonnet_4
+    iterations: 100
+  - tool: claude_code
+    model: claude_haiku_4_5
+    iterations: 100

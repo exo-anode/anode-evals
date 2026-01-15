@@ -62,6 +62,9 @@ pub enum ModelVersion {
     /// Claude Sonnet 4
     #[serde(rename = "claude_sonnet_4")]
     ClaudeSonnet4,
+    /// Claude Haiku 4.5
+    #[serde(rename = "claude_haiku_4_5")]
+    ClaudeHaiku45,
     /// GPT-5.2 Extra High
     #[serde(rename = "gpt_5_2_xhigh")]
     Gpt52XHigh,
@@ -86,6 +89,7 @@ impl fmt::Display for ModelVersion {
         match self {
             ModelVersion::ClaudeOpus45 => write!(f, "claude-opus-4-5-20251101"),
             ModelVersion::ClaudeSonnet4 => write!(f, "claude-sonnet-4-20250514"),
+            ModelVersion::ClaudeHaiku45 => write!(f, "claude-haiku-4-5-20251001"),
             ModelVersion::Gpt52XHigh => write!(f, "gpt-5.2-xhigh"),
             ModelVersion::Gpt52High => write!(f, "gpt-5.2-high"),
             ModelVersion::Gpt5 => write!(f, "gpt-5"),

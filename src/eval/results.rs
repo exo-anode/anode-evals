@@ -76,6 +76,27 @@ pub struct EvalRunResult {
     pub agent_logs: Option<String>,
     /// Error message if failed
     pub error: Option<String>,
+    /// Maximum iterations (turns) configured for this run
+    pub max_iterations: Option<u32>,
+    /// Actual number of turns/iterations used by the agent
+    pub turns_used: Option<u32>,
+    /// Token usage statistics
+    pub token_usage: Option<TokenUsage>,
+}
+
+/// Token usage statistics from an agent run
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TokenUsage {
+    /// Total input tokens used
+    pub input_tokens: u64,
+    /// Total output tokens generated
+    pub output_tokens: u64,
+    /// Cache read input tokens (for prompt caching)
+    pub cache_read_input_tokens: u64,
+    /// Cache creation input tokens
+    pub cache_creation_input_tokens: u64,
+    /// Total cost in USD
+    pub total_cost_usd: f64,
 }
 
 impl EvalRunResult {
@@ -94,7 +115,23 @@ impl EvalRunResult {
             score: None,
             agent_logs: None,
             error: None,
+            max_iterations: None,
+            turns_used: None,
+            token_usage: None,
         }
+    }
+
+    pub fn with_max_iterations(mut self, max_iterations: u32) -> Self {
+        self.max_iterations = Some(max_iterations);
+        self
+    }
+
+    pub fn set_turns_used(&mut self, turns: u32) {
+        self.turns_used = Some(turns);
+    }
+
+    pub fn set_token_usage(&mut self, usage: TokenUsage) {
+        self.token_usage = Some(usage);
     }
 
     pub fn complete_with_results(&mut self, test_results: TestSuiteResult) {
@@ -385,6 +422,28 @@ impl EvaluationResults {
                 report.push_str(&format!(
                     "- Tests: {}/{} passed\n",
                     test_results.passed, test_results.total
+                ));
+            }
+            // Show turns used vs max iterations
+            match (run.turns_used, run.max_iterations) {
+                (Some(used), Some(max)) => {
+                    report.push_str(&format!("- Turns: {}/{}\n", used, max));
+                }
+                (Some(used), None) => {
+                    report.push_str(&format!("- Turns used: {}\n", used));
+                }
+                (None, Some(max)) => {
+                    report.push_str(&format!("- Max turns: {}\n", max));
+                }
+                _ => {}
+            }
+            // Show token usage
+            if let Some(ref usage) = run.token_usage {
+                report.push_str(&format!(
+                    "- Tokens: {} input, {} output (${:.4})\n",
+                    usage.input_tokens + usage.cache_read_input_tokens + usage.cache_creation_input_tokens,
+                    usage.output_tokens,
+                    usage.total_cost_usd
                 ));
             }
             if let Some(ref error) = run.error {
